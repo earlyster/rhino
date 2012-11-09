@@ -1712,8 +1712,7 @@ public class ScriptRuntime {
             if (isName) {
                 return Boolean.TRUE;
             }
-            String idStr = (id == null) ? "null" : id.toString();
-            throw typeError2("msg.undef.prop.delete", toString(obj), idStr);
+            throw undefDeleteError(obj, id);
         }
         boolean result = deleteObjectElem(sobj, id, cx);
         return wrapBoolean(result);
@@ -3164,14 +3163,13 @@ public class ScriptRuntime {
                 // Don't overwrite existing def if already defined in object
                 // or prototypes of object.
                 if (!ScriptableObject.hasProperty(scope, name)) {
-                    if (!evalScript) {
+                    if (isConst) {
+                        ScriptableObject.defineConstProperty(varScope, name);
+                    } else if (!evalScript) {
                         // Global var definitions are supposed to be DONTDELETE
-                        if (isConst)
-                            ScriptableObject.defineConstProperty(varScope, name);
-                        else
-                            ScriptableObject.defineProperty(
-                                varScope, name, Undefined.instance,
-                                ScriptableObject.PERMANENT);
+                        ScriptableObject.defineProperty(
+                            varScope, name, Undefined.instance,
+                            ScriptableObject.PERMANENT);
                     } else {
                         varScope.put(name, varScope, Undefined.instance);
                     }
@@ -3728,25 +3726,25 @@ public class ScriptRuntime {
 
     public static RuntimeException undefReadError(Object object, Object id)
     {
-        String idStr = (id == null) ? "null" : id.toString();
-        return typeError2("msg.undef.prop.read", toString(object), idStr);
+        return typeError2("msg.undef.prop.read", toString(object), toString(id));
     }
 
     public static RuntimeException undefCallError(Object object, Object id)
     {
-        String idStr = (id == null) ? "null" : id.toString();
-        return typeError2("msg.undef.method.call", toString(object), idStr);
+        return typeError2("msg.undef.method.call", toString(object), toString(id));
     }
 
     public static RuntimeException undefWriteError(Object object,
                                                    Object id,
                                                    Object value)
     {
-        String idStr = (id == null) ? "null" : id.toString();
-        String valueStr = (value instanceof Scriptable)
-                          ? value.toString() : toString(value);
-        return typeError3("msg.undef.prop.write", toString(object), idStr,
-                          valueStr);
+        return typeError3("msg.undef.prop.write", toString(object), toString(id),
+                          toString(value));
+    }
+
+    private static RuntimeException undefDeleteError(Object object, Object id)
+    {
+        throw typeError2("msg.undef.prop.delete", toString(object), toString(id));
     }
 
     public static RuntimeException notFoundError(Scriptable object,
